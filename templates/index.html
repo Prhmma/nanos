@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+   <style>
+      .flashes {
+      background: rgb(255, 0, 0);
+      color: white;
+      }
+      .row {
+      margin: 0 auto;
+      }
+      .col-sm-4 {
+      margin: 0 auto;
+      }
+      #container {
+      width: 100%;
+      height: 800px;
+      margin: 0;
+      padding: 0;
+      }
+      .range-wrap {
+      position: relative;
+      margin: 0 auto 3rem;
+      }
+      .range {
+      width: 100%;
+      }
+      .bubble {
+      background: rgb(106, 109, 243);
+      color: white;
+      padding: 4px 12px;
+      position: absolute;
+      border-radius: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      }
+      .bubble::after {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: red;
+      top: -1px;
+      left: 50%;
+      }
+      body {
+      margin: 2rem;
+      }
+   </style>
+   <head>
+      <meta charset="utf-8">
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+      <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+      <script src="https://cdn.anychart.com/releases/v8/js/anychart-base.min.js"></script>
+      <script src="https://cdn.anychart.com/releases/v8/js/anychart-tag-cloud.min.js"></script>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <script>
+         var chart = anychart.tagCloud();
+         anychart.onDocumentReady(function () {
+           chart.title('Word relevancy map')
+           chart.angles([0])
+           chart.container("container");
+           chart.draw();
+         });
+         function get_json_to_html() {
+           try {
+             var result = {{ data| safe
+           }};
+         similarity_rate = document.getElementById('sim').value / 100;
+         keys = '';
+         word_cloud = []
+         result = JSON.parse(result);
+         for (var i = 0; i < result.length; i++) {
+           if (result[i][1] > similarity_rate) {
+             keys += result[i][0] + ', ';
+             word_cloud.push(result[i])
+           }
+         }
+         document.getElementById('results').value = keys;
+         chart.data(word_cloud);
+         return keys;
+           }
+           catch (err) {
+           document.getElementById('results').value = err
+         }
+         }
+         const allRanges = document.querySelectorAll(".range-wrap");
+         allRanges.forEach(wrap => {
+           const range = wrap.querySelector(".range");
+           const bubble = wrap.querySelector(".bubble");
+         
+           range.addEventListener("input", () => {
+             setBubble(range, bubble);
+           });
+           setBubble(range, bubble);
+         });
+         
+         function setBubble(range, bubble) {
+           const val = range.value;
+           const min = range.min ? range.min : 0;
+           const max = range.max ? range.max : 100;
+           const newVal = Number(((val - min) * 100) / (max - min));
+           bubble.innerHTML = val;
+         
+           // Sorta magic numbers based on size of the native UI thumb
+           bubble.style.left = `calc(${newVal}% + (${8 - newVal * 0.15}px))`;
+         }
+         function isValidHttpUrl(string) {
+           let url;
+         
+           try {
+             url = new URL(string);
+           } catch (_) {
+             return false;
+           }
+         
+           return url.protocol === "http:" || url.protocol === "https:";
+         }
+         function validateForm() {
+           var x = document.forms["form"]["URL"].value;
+           if (isValidHttpUrl(x)) {
+             alert("URL is not right");
+             return false;
+           }
+         
+         }
+      </script>
+      <title>Document</title>
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <ul class=flashes>
+         {% for message in messages %}
+         <li>{{ message }}</li>
+         {% endfor %}
+      </ul>
+      {% endif %}
+      {% endwith %}
+      {% block body %}{% endblock %}
+   </head>
+   <body>
+      <form name="form" method="POST" onsubmit="return validateForm()">
+         <div class="row">
+            <div class="col-sm-4">
+               <label for="URL">URL</label>
+               <input type="URL" class="form-control" id="URL" placeholder="URL" name="URL">
+               <label for="InputPS" required>Products/Services</label>
+               <input type="text" class="form-control" id="InputPS" placeholder="Products/Services" name="InputPS">
+               <label for="Similarity">Similarity Percentage</label>
+               <div class="range-wrap">
+                  <input id="sim" type="range" class="range" name="Similarity" value="80" min="1" max="100"
+                     oninput="this.nextElementSibling.value = this.value;" onchange="get_json_to_html(this);">
+                  <output class="bubble">80</output>
+               </div>
+               <div style="margin-top:10px;">
+                  <textarea class="form-control" rows="5" id="results" placeholder="Relevant Words" name="results"></textarea>
+               </div>
+               <div width:350;margin-top:10px;">
+               <button type="button" class="btn btn-primary" style="text-align:left;" onclick="get_json_to_html()"><span
+                  class="glyphicon glyphicon-refresh"></span> Refresh</button>
+               <button type="submit" class="btn btn-success" style="text-align:right;" value="{{ request.form }}"
+                  onclick="get_json_to_html()">Fetch</button>
+            </div>
+         </div>
+         </div>
+      </form>
+      <div id="container" class="col-lg-4" height="800px"></div>
+   </body>
+</html>
